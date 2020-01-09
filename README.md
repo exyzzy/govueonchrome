@@ -58,6 +58,7 @@ Tip: Use Ctrl-Shift-I to reformat an editor file, Prettier style
 
 ## Install Go
 Go to https://golang.org/dl/ and find the latest linux-amd64 version (1.13.5 in my case)
+
 Type in your terminal window:
 ```
 wget https://dl.google.com/go/go1.13.5.linux-amd64.tar.gz 
@@ -76,7 +77,8 @@ export CGO_ENABLED=0
 ```
 
 Save and close the file, in the terminal window type exit to close down your current terminal, then go to your linux folder and start a new terminal to load your new profile settings.
-In the terminal, type go version to make sure go installed properly.
+
+In the terminal, type `go version` to make sure go installed properly.
 
 ## Set up SSH keys to access Github and/or Bitbucket:
 Type in the terminal window:
@@ -100,9 +102,10 @@ cat ~/.ssh/id_rsa.pub | xclip -sel clip
 Now go to bitbucket and github settings, SSH keys sections and upload your new SSH public key to your account. It’s in the paste buffer, so just ctrl-v it.
 
 ## Set up git
-Type `git version`, to check your git version
-Go to: https://git-scm.com/downloads, your version should be fine, but if not: `sudo apt-get install git`
-Now config git:
+1. Type `git version`, to check your git version
+1. Go to: https://git-scm.com/downloads, your version should be fine, but if not: `sudo apt-get install git`
+1. Now config git:
+
 ```
 git config --list 
 # nothing there, right? So obviously, use your own settings below:
@@ -137,4 +140,92 @@ echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" 
 sudo apt update
 sudo apt -y install postgresql-12 postgresql-client-12
 ```
-(more to come...)
+
+You can now start the database server using:
+```
+pg_ctlcluster 12 main start 
+psql -V 
+# to confirm version of postgres (12.1 or greater)
+```
+
+Now edit the postgres config for local mode:
+
+```
+sudo su - postgres
+cd /etc/postgresql/12/main/
+edit pg_hba.conf
+```
+
+Change the last column of ALL rows to be trust, eg:
+```
+local all postgres peer
+```
+to:
+```
+local all postgres trust
+```
+`exit` to exit postgres su mode.
+
+Note that your postgres account may not have access to VS code. So use edit (vi) the default system editor. A few commands that may help if you are unfamiliar:
+
+* arrow keys to navigate
+* dw to delete word under the cursor
+* dd to delete line under the cursor
+* i to go into “insert mode” to type new stuff at the cursor
+* esc to exit insert mode
+* w to write
+* q to quit
+* wq to write and quit
+Now create yourself as admin:
+```
+sudo su - postgres
+createuser --interactive --pwprompt
+# use your name here
+ericlang ericlang y 
+# role password superuser?
+exit
+```
+## Install Heroku CLI
+```
+curl https://cli-assets.heroku.com/install.sh | sh
+#make a heroku account first, if you have not yet
+heroku login -i
+```
+Note: Contrary to Heroku docs, Snapd did not work for me.
+## Make sure it all works
+
+Reboot the Chromebook first.
+```
+# create the user/pass for local db that govueintro assumes
+cd ~/go/src/github.com/exyzzy/govueintro
+createuser -P -d govueintro
+# use password: govueintro
+createdb govueintro
+go install
+# now run the app:
+govueintro
+```
+
+This part is a little confusing. Normally to see your app running you’d point your browser at localhost. However, the linux terminal on a chromebox is a full fledged VM running in a different space from the chrome browser. The crostini devs solved this by creating an external interface for the container called penguin.linux.test, as described here and here. So to see govueintro with the main chromebox browser you can get to it with http://penguin.linux.test:8000 It is still called localhost for any commands issued in the linux terminal (like curl, below). Another solution is to install a browser in the linux VM itself (like sudo apt-get install firefox-esr , and localhost will work just fine, but then you have two browsers installed).
+
+```
+# open another terminal (ctrl-shift-n)
+# to create the database tables, type: 
+curl -X DELETE http://localhost:8000/api/clean
+# can alternatively run: psql -U govueintro -f data/setup.sql -d govueintro
+```
+
+Now open: http://penguin.linux.test:8000 and you can play with the govueintro application — see the todos menu.
+Everything should be building and running locally now. Let’s deploy it to Heroku.
+
+```
+cd ~/go/src/github.com/exyzzy/govueintro
+heroku create
+# note the name of the app heroku gives you, and use it below 
+# lit-wildwood-48301 is my app name
+heroku addons:create heroku-postgresql:hobby-dev
+heroku git:remote -a lit-wildwood-48301
+git push heroku master
+curl -X DELETE http://lit-wildwood-48301.herokuapp.com/api/clean
+```
+All done, now go to the heroku app you just made. Mine is https://lit-wildwood-48301.herokuapp.com (yours will be different). Have fun.
