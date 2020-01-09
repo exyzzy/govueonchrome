@@ -1,4 +1,5 @@
 # govueonchrome
+Note: Go see the original [Medium Article](https://medium.com/@exyzzy/how-to-set-up-the-go-vue-web-stack-to-develop-on-a-chromebook-e609b192b17b)
 # How to set up the Go+Vue Web Stack to Develop on a Chromebook
 For years I have done my development on mac laptops and desktops — they certainly work well for this, and I still have/use them. However, as part of some promotion a few months back to get our company to try Google cloud services, Google sent me a free Chromebook. I had purchased and messed around with a Chromebook when they first came out and was somewhat underwhelmed. This time looking at them though I was impressed that even the Celeron version they sent me was very usable, and what’s more it now has Linux built-in. So I set off on a small experiment to see if I could configure all I needed in Chromebook’s Linux to do real development for my current stack. Cut to the chase: yes! It’s not quite as easy to set up as a mac, but it is very possible with just a little more effort. You can end up with a super nice dev setup on Chromebook for this stack, with really nothing substantial lacking, and maybe even save a few dollars over a Mac or Windows machine. I was so happy with the result that I recently bought a Pixelbook Go and replicated the setup on it to get more storage, a faster processor, better display, and sleeker HW.
 
@@ -55,4 +56,85 @@ Tip: Here are some useful VS Code Extensions to install:
 
 Tip: Use Ctrl-Shift-I to reformat an editor file, Prettier style
 
-(..to be continued)
+## Install Go
+Go to https://golang.org/dl/ and find the latest linux-amd64 version (1.13.5 in my case)
+Type in your terminal window:
+```
+wget https://dl.google.com/go/go1.13.5.linux-amd64.tar.gz 
+# or latest version
+sudo tar -C /usr/local -xzf go1.13.5.linux-amd64.tar.gz
+code ~/.profile
+```
+
+Add to bottom of the file after all other text:
+
+```
+GOROOT=/usr/local/go
+GOPATH=$HOME/go
+PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+export CGO_ENABLED=0
+```
+
+Save and close the file, in the terminal window type exit to close down your current terminal, then go to your linux folder and start a new terminal to load your new profile settings.
+In the terminal, type go version to make sure go installed properly.
+
+## Set up SSH keys to access Github and/or Bitbucket:
+Type in the terminal window:
+```
+sudo apt-get install xclip 
+# xclip is a clipboard util, it will be helpful
+ssh-keygen 
+# accept the default filename/location
+# type in passphrase (remember it)
+sudo apt-get install mercurial 
+# needed by bitbucket
+ls ~/.ssh
+# to verify keys generated
+eval $(ssh-agent) 
+ssh-add ~/.ssh/id_rsa 
+# type in the passphrase you just remembered 
+cat ~/.ssh/id_rsa.pub | xclip -sel clip 
+# to copy your public key into your paste buffer
+```
+
+Now go to bitbucket and github settings, SSH keys sections and upload your new SSH public key to your account. It’s in the paste buffer, so just ctrl-v it.
+
+## Set up git
+Type `git version`, to check your git version
+Go to: https://git-scm.com/downloads, your version should be fine, but if not: `sudo apt-get install git`
+Now config git:
+```
+git config --list 
+# nothing there, right? So obviously, use your own settings below:
+git config --global user.email “eric@foo.com”
+git config --global user.name “Eric Lang”
+git config --global url.”git@bitbucket.org:”.insteadof https://bitbucket.org
+git config --global url.”git@github.com:”.insteadof https://github.com
+git config --global core.editor “code --wait”
+# ok, let's try it all..
+```
+## Clone a sample Go-Vue Project, Go Style
+Use Go’s Get function to get a project from github
+```
+go get github.com/exyzzy/govueintro
+cd ~/go/src/github.com/exyzzy/govueintro
+# there it is, let’s load it up and take a peek, 
+# but don't change anything yet
+code .
+```
+Install Latest PostgreSQL
+Note: you really do need to get the latest Postgres (12.1 at this writing) to be compatible with Heroku. Details here.
+```
+sudo apt update
+sudo apt -y upgrade
+sudo shutdown -r now
+# close all terminals, and open a new one
+sudo apt update
+sudo apt-get install lsb-release
+sudo apt -y install gnupg2
+wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" |sudo tee  /etc/apt/sources.list.d/pgdg.list
+sudo apt update
+sudo apt -y install postgresql-12 postgresql-client-12
+```
+(more to come...)
